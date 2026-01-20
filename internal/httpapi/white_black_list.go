@@ -1,11 +1,11 @@
-package http_api
+package httpapi
 
 import (
 	"encoding/json"
 	"net/http"
 )
 
-// SubnetRequest { "subnet": "192.1.1.0/25"}
+// AddSubnetRequest SubnetRequest { "subnet": "192.1.1.0/25"}.
 type AddSubnetRequest struct {
 	Subnet string `json:"subnet"`
 }
@@ -24,7 +24,7 @@ func (s *Server) addBlacklistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.app.AddToBlackList(req.Subnet); err != nil {
+	if err := s.app.AddToBlacklist(req.Subnet); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -39,7 +39,7 @@ func (s *Server) removeBlacklistHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := s.app.RemoveFromBlackList(subnet); err != nil {
+	if err := s.app.RemoveFromBlacklist(subnet); err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
@@ -61,7 +61,7 @@ func (s *Server) addWhitelistHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.app.AddToWhiteList(req.Subnet); err != nil {
+	if err := s.app.AddToWhitelist(req.Subnet); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -76,7 +76,7 @@ func (s *Server) removeWhitelistHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := s.app.RemoveFromWhiteList(subnet); err != nil {
+	if err := s.app.RemoveFromWhitelist(subnet); err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}

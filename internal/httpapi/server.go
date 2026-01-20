@@ -1,20 +1,21 @@
-package http_api
+package httpapi
 
 import (
 	"context"
 	"fmt"
-	"github.com/esivanov203/antibruteforce/internal/app"
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/esivanov203/antibruteforce/internal/service"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 )
 
 type Server struct {
 	httpServer *http.Server
 	router     *mux.Router
-	app        app.App
+	app        service.App
 }
 
 type responseWriter struct {
@@ -50,7 +51,7 @@ func (s *Server) Start(chanErr chan struct{}) {
 	// todo info
 	log.Printf("http server starting on: %s", s.httpServer.Addr)
 	if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		//todo err
+		// todo err
 		log.Printf("http server not started: %v", err)
 	}
 
@@ -81,8 +82,7 @@ func (s *Server) logMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(rw, r)
 
 		// todo info
-		log.Printf("HTTP request - method: %s, ip: %s, path: %s, status: %s, latency: %s, uagent: %s, proto: %s",
+		log.Printf("HTTP request - method: %s, ip: %s, path: %s, status: %d, latency: %d, uagent: %s, proto: %s",
 			r.Method, r.RemoteAddr, r.URL.Path, rw.status, time.Since(start).Milliseconds(), r.UserAgent(), r.Proto)
-
 	})
 }

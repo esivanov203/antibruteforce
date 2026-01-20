@@ -1,8 +1,7 @@
-package http_api
+package httpapi
 
 import (
 	"encoding/json"
-	"net"
 	"net/http"
 )
 
@@ -19,13 +18,7 @@ func (s *Server) resetBucketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ip := net.ParseIP(req.IP)
-	if ip == nil {
-		http.Error(w, "invalid ip", http.StatusBadRequest)
-		return
-	}
-
-	err := s.app.ResetBuckets(req.Login, ip)
+	err := s.app.ResetBuckets(req.Login, req.IP)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

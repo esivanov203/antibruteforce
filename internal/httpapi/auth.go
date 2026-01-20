@@ -1,9 +1,8 @@
-package http_api
+package httpapi
 
 import (
 	"encoding/json"
 	"log"
-	"net"
 	"net/http"
 )
 
@@ -25,13 +24,10 @@ func (s *Server) authHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ip := net.ParseIP(req.IP)
-	if ip == nil {
-		http.Error(w, "invalid ip", http.StatusBadRequest)
-		return
+	result, err := s.app.Auth(req.Login, req.Password, req.IP)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-
-	result := s.app.Auth(req.Login, req.Password, ip)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

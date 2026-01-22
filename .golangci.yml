@@ -17,6 +17,7 @@ linters-settings:
           - github.com/esivanov203/antibruteforce/internal/model
           - github.com/gorilla/handlers
           - github.com/gorilla/mux
+          - github.com/benbjohnson/clock
       Test:
         files:
           - $test
@@ -27,6 +28,7 @@ linters-settings:
           - github.com/stretchr/testify/require
           - github.com/stretchr/testify/assert
           - github.com/stretchr/testify/mock
+          - github.com/benbjohnson/clock
 
 linters:
   disable-all: true

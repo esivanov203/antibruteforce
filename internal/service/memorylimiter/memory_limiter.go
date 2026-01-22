@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/benbjohnson/clock"
 	"github.com/esivanov203/antibruteforce/internal/model"
 )
 
@@ -12,18 +13,21 @@ type MemoryLimiter struct {
 	mutex     sync.Mutex
 	limit     int           // макс. кол-во токенов в бакете
 	period    time.Duration // время полного восст-ия макс. кол-во токенов в бакете
-	gcTicker  *time.Ticker  // период запуска горутины очистки неактивных бакетов
+	gcTicker  *clock.Ticker // период запуска горутины очистки неактивных бакетов
 	bucketTTL time.Duration // время жизни неактивного бакета
+	clk       clock.Clock
 }
 
-func NewMemoryLimiter(limit int, period time.Duration) *MemoryLimiter {
+func NewMemoryLimiter(limit int, period time.Duration, clk clock.Clock) *MemoryLimiter {
 	ml := &MemoryLimiter{
 		buckets:   make(map[string]*model.Bucket),
 		limit:     limit,
 		period:    period,
 		bucketTTL: period * 2,
-		gcTicker:  time.NewTicker(period),
+		gcTicker:  clk.Ticker(period),
+		clk:       clk,
 	}
+
 	go ml.startGC()
 	return ml
 }
@@ -34,7 +38,7 @@ func (ml *MemoryLimiter) Allow(key string) bool {
 	ml.mutex.Lock()
 	b, exists := ml.buckets[key]
 	if !exists {
-		b = model.NewBucket(ml.limit, ml.period)
+		b = model.NewBucket(ml.limit, ml.period, ml.clk)
 		ml.buckets[key] = b
 	}
 	ml.mutex.Unlock()
@@ -52,7 +56,7 @@ func (ml *MemoryLimiter) Reset(key string) {
 // startGC запускает периодическую очистку неактивных бакетов.
 func (ml *MemoryLimiter) startGC() {
 	for range ml.gcTicker.C {
-		now := time.Now()
+		now := ml.clk.Now()
 		ml.mutex.Lock()
 		for k, b := range ml.buckets {
 			b.Mutex.Lock()

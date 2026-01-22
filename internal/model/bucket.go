@@ -3,6 +3,8 @@ package model
 import (
 	"sync"
 	"time"
+
+	"github.com/benbjohnson/clock"
 )
 
 type Bucket struct {
@@ -11,17 +13,19 @@ type Bucket struct {
 	rate     float64 // скорость восстановление попыток в секунду (если rate=0,5 то через 2 сек появится одна попытка)
 	Last     time.Time
 	Mutex    sync.Mutex
+	clk      clock.Clock
 }
 
 // NewBucket
 // limit - количество попыток за период - duration,
 // например 10 попыток за 1 минуту.
-func NewBucket(limit int, duration time.Duration) *Bucket {
+func NewBucket(limit int, duration time.Duration, clk clock.Clock) *Bucket {
 	return &Bucket{
 		capacity: limit,
 		token:    float64(limit),
 		rate:     float64(limit) / duration.Seconds(), // токены в секунду
-		Last:     time.Now(),
+		Last:     clk.Now(),
+		clk:      clk,
 	}
 }
 
@@ -29,17 +33,15 @@ func (b *Bucket) Allow() bool {
 	b.Mutex.Lock()
 	defer b.Mutex.Unlock()
 
-	now := time.Now()
-	elapsed := now.Sub(b.Last).Seconds() // время от предыдущей попытки
+	now := b.clk.Now()
+	elapsed := now.Sub(b.Last).Seconds()
 	b.Last = now
 
-	// восстановление токенов
 	b.token += elapsed * b.rate
 	if b.token > float64(b.capacity) {
-		b.token = float64(b.capacity) // количество попыток не должны превышать максимум
+		b.token = float64(b.capacity)
 	}
 
-	// если есть токены то используем 1 токен для реализации попытки
 	if b.token >= 1 {
 		b.token--
 		return true

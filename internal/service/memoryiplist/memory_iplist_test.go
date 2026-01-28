@@ -1,4 +1,4 @@
-package memory_iplist
+package memoryiplist
 
 import (
 	"fmt"

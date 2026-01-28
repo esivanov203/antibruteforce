@@ -18,6 +18,8 @@ linters-settings:
           - github.com/gorilla/handlers
           - github.com/gorilla/mux
           - github.com/benbjohnson/clock
+          - github.com/joho/godotenv
+          - github.com/esivanov203/antibruteforce/internal/httpapi
       Test:
         files:
           - $test

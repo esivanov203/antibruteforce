@@ -44,7 +44,8 @@ func TestBucketAllow(t *testing.T) {
 	})
 
 	t.Run("concurrent access", func(t *testing.T) {
-		bucket := NewBucket(100, time.Second, clock.New())
+		clk := clock.NewMock()
+		bucket := NewBucket(100, time.Second, clk)
 
 		var success atomic.Int64
 		wg := sync.WaitGroup{}
@@ -64,6 +65,7 @@ func TestBucketAllow(t *testing.T) {
 		require.False(t, bucket.Allow())
 		// при 1000 параллельных запросах успешных = capacity
 		require.Equal(t, int64(100), success.Load())
+		require.False(t, bucket.Allow())
 	})
 
 	t.Run("token recovery partially", func(t *testing.T) {

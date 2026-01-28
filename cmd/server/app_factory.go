@@ -2,13 +2,13 @@ package main
 
 import (
 	"errors"
-	"github.com/esivanov203/antibruteforce/internal/service/memory_iplist"
 	"strconv"
 	"time"
 
 	"github.com/benbjohnson/clock"
 	"github.com/esivanov203/antibruteforce/internal/service"
 	"github.com/esivanov203/antibruteforce/internal/service/abs"
+	iplist "github.com/esivanov203/antibruteforce/internal/service/memoryiplist"
 	limiter "github.com/esivanov203/antibruteforce/internal/service/memorylimiter"
 )
 
@@ -45,8 +45,8 @@ func appFactory(
 	loginLimiter := limiter.NewMemoryLimiter(ll, d, clk)
 	pwdLimiter := limiter.NewMemoryLimiter(pl, d, clk)
 	ipLimiter := limiter.NewMemoryLimiter(il, d, clk)
-	wList := memory_iplist.New()
-	bList := memory_iplist.New()
+	wList := iplist.New()
+	bList := iplist.New()
 
 	// Cервис также имеет свой интерфейс
 	app := abs.NewAntiBruteService(

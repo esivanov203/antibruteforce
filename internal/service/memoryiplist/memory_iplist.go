@@ -1,4 +1,4 @@
-package memory_iplist
+package memoryiplist
 
 import (
 	"errors"
@@ -6,9 +6,11 @@ import (
 	"sync"
 )
 
-var ErrAlreadyExists = errors.New("ip address already exists")
-var ErrNotFound = errors.New("ip address not found")
-var ErrEmptyIp = errors.New("ip address is empty")
+var (
+	ErrAlreadyExists = errors.New("ip address already exists")
+	ErrNotFound      = errors.New("ip address not found")
+	ErrEmptyIP       = errors.New("ip address is empty")
+)
 
 type MemoryIPList struct {
 	mutex sync.Mutex
@@ -28,7 +30,7 @@ func (m *MemoryIPList) Contains(ip net.IP) bool {
 
 func (m *MemoryIPList) Add(ip string) error {
 	if ip == "" {
-		return ErrEmptyIp
+		return ErrEmptyIP
 	}
 
 	m.mutex.Lock()
@@ -44,7 +46,7 @@ func (m *MemoryIPList) Add(ip string) error {
 
 func (m *MemoryIPList) Remove(ip string) error {
 	if ip == "" {
-		return ErrEmptyIp
+		return ErrEmptyIP
 	}
 
 	m.mutex.Lock()

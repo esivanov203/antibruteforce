@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"github.com/joho/godotenv"
 	"log"
 	"os"
 	"os/signal"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/esivanov203/antibruteforce/internal/httpapi"
+	"github.com/joho/godotenv"
 )
 
 func main() {

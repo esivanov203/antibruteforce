@@ -25,4 +25,7 @@ test:
 clean:
 	rm -rf ./bin
 
-.PHONY: build version lint test clean
+run: build
+	$(BIN_SERVER)
+
+.PHONY: build version lint test clean run

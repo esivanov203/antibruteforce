@@ -12,6 +12,11 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type Serv interface {
+	Start(chanErr chan struct{})
+	Stop(ctx context.Context)
+}
+
 type Server struct {
 	httpServer *http.Server
 	router     *mux.Router
@@ -28,7 +33,7 @@ func (rw *responseWriter) WriteHeader(status int) {
 	rw.ResponseWriter.WriteHeader(status)
 }
 
-func New(port string) *Server {
+func New(port string, app service.App) *Server {
 	router := mux.NewRouter()
 	s := &Server{
 		httpServer: &http.Server{
@@ -39,6 +44,7 @@ func New(port string) *Server {
 			IdleTimeout:       30 * time.Second,
 		},
 		router: router,
+		app:    app,
 	}
 	s.router.Use(handlers.CORS(handlers.AllowedOrigins([]string{"*"})))
 	s.router.Use(s.logMiddleware)
@@ -55,11 +61,7 @@ func (s *Server) Start(chanErr chan struct{}) {
 		log.Printf("http server not started: %v", err)
 	}
 
-	// если сервер завершился сигнализируем
-	select {
-	case chanErr <- struct{}{}:
-	default:
-	}
+	chanErr <- struct{}{}
 }
 
 func (s *Server) Stop(ctx context.Context) {

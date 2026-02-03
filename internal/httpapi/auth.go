@@ -1,9 +1,6 @@
 package httpapi
 
 import (
-	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -29,49 +26,15 @@ func (a *AuthRequest) Validate() []string {
 	return errs
 }
 
-type AuthResponse struct {
-	OK     bool     `json:"ok"`
-	Errors []string `json:"errors"`
-}
-
 func (s *Server) authHandler(w http.ResponseWriter, r *http.Request) {
-	var (
-		req  AuthRequest
-		resp AuthResponse
-	)
-	w.Header().Set("Content-Type", "application/json")
+	defer func() { _ = r.Body.Close() }()
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		resp.Errors = append(resp.Errors, fmt.Sprintf("json format error: %v", err))
-		w.WriteHeader(http.StatusBadRequest)
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			log.Printf("ERROR: auth handler encode: %v", err)
-		}
-		return
-	}
-
-	if errs := req.Validate(); errs != nil {
-		resp.Errors = append(resp.Errors, errs...)
-		w.WriteHeader(http.StatusBadRequest)
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			log.Printf("ERROR: auth handler encode: %v", err)
-		}
+	var req AuthRequest
+	respBody := NewResponseBody(w, r)
+	if !respBody.validate(&req) {
 		return
 	}
 
 	result, err := s.app.Auth(req.Login, req.Password, req.IP)
-	if err != nil {
-		resp.Errors = append(resp.Errors, err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		if err := json.NewEncoder(w).Encode(resp); err != nil {
-			log.Printf("ERROR: auth handler encode: %v", err)
-		}
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(AuthResponse{OK: result}); err != nil {
-		// todo error
-		log.Printf("auth handler encode: %v", err)
-	}
+	respBody.sendResult(http.StatusOK, result, err)
 }

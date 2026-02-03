@@ -7,54 +7,75 @@ import (
 )
 
 var (
-	ErrAlreadyExists = errors.New("ip address already exists")
-	ErrNotFound      = errors.New("ip address not found")
-	ErrEmptyIP       = errors.New("ip address is empty")
+	ErrAlreadyExists = errors.New("subnet already exists")
+	ErrNotFound      = errors.New("subnet not found")
+	ErrEmptyIP       = errors.New("subnet is empty")
 )
 
 type MemoryIPList struct {
 	mutex sync.Mutex
-	data  map[string]struct{}
+	data  []*net.IPNet
 }
 
 func New() *MemoryIPList {
-	return &MemoryIPList{data: make(map[string]struct{})}
+	return &MemoryIPList{}
 }
 
+// проверяет, попадает ли IP в любую подсеть списка.
 func (m *MemoryIPList) Contains(ip net.IP) bool {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	_, ok := m.data[ip.String()]
-	return ok
+
+	for _, val := range m.data {
+		if val.Contains(ip) {
+			return true
+		}
+	}
+
+	return false
 }
 
-func (m *MemoryIPList) Add(ip string) error {
-	if ip == "" {
+func (m *MemoryIPList) Add(subnet string) error {
+	if subnet == "" {
 		return ErrEmptyIP
+	}
+
+	_, ipNet, err := net.ParseCIDR(subnet)
+	if err != nil {
+		return err
 	}
 
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	if _, ok := m.data[ip]; ok {
-		return ErrAlreadyExists
+	for _, n := range m.data {
+		if n.String() == ipNet.String() {
+			return ErrAlreadyExists
+		}
 	}
-	m.data[ip] = struct{}{}
 
+	m.data = append(m.data, ipNet)
 	return nil
 }
 
-func (m *MemoryIPList) Remove(ip string) error {
-	if ip == "" {
+func (m *MemoryIPList) Remove(subnet string) error {
+	if subnet == "" {
 		return ErrEmptyIP
+	}
+
+	_, ipNet, err := net.ParseCIDR(subnet)
+	if err != nil {
+		return err
 	}
 
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	if _, ok := m.data[ip]; ok {
-		delete(m.data, ip)
-		return nil
+	for i, n := range m.data {
+		if n.String() == ipNet.String() {
+			m.data = append(m.data[:i], m.data[i+1:]...)
+			return nil
+		}
 	}
 
 	return ErrNotFound

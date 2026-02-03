@@ -12,15 +12,15 @@ import (
 func TestMemoryIPList_AddContainsRemove(t *testing.T) {
 	list := New()
 
-	ip := "127.0.0.1"
-	parsedIP := net.ParseIP(ip)
+	ip := "127.0.0.1/32"
+	parsedIP := net.ParseIP("127.0.0.1")
 
 	// Сначала не должно быть IP
 	require.False(t, list.Contains(parsedIP), "IP should not exist yet")
 
 	// Добавляем IP
-	require.Error(t, list.Add(""))
-	require.NoError(t, list.Add(ip))
+	require.Error(t, list.Add(""))   // пустая строка → ошибка
+	require.NoError(t, list.Add(ip)) // добавление корректного CIDR
 
 	// Теперь должно содержать
 	require.True(t, list.Contains(parsedIP), "IP should exist after adding")
@@ -48,9 +48,9 @@ func TestMemoryIPList_Concurrency(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			ip := fmt.Sprintf("%s%d", ipBase, i)
+			ip := fmt.Sprintf("%s%d/32", ipBase, i) // обязательно /32
 			require.NoError(t, list.Add(ip))
-			list.Contains(net.ParseIP(ip))
+			list.Contains(net.ParseIP(fmt.Sprintf("%s%d", ipBase, i)))
 			require.NoError(t, list.Remove(ip))
 		}(i)
 	}

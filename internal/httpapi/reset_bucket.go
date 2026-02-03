@@ -1,8 +1,8 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 type ResetBucketRequest struct {
@@ -10,19 +10,27 @@ type ResetBucketRequest struct {
 	IP    string `json:"ip"`
 }
 
-func (s *Server) resetBucketHandler(w http.ResponseWriter, r *http.Request) {
-	var req ResetBucketRequest
+func (a *ResetBucketRequest) Validate() []string {
+	var errs []string
+	if strings.TrimSpace(a.Login) == "" {
+		errs = append(errs, "login required")
+	}
+	if strings.TrimSpace(a.IP) == "" {
+		errs = append(errs, "ip required")
+	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+	return errs
+}
+
+func (s *Server) resetBucketHandler(w http.ResponseWriter, r *http.Request) {
+	defer func() { _ = r.Body.Close() }()
+
+	var req ResetBucketRequest
+	respBody := NewResponseBody(w, r)
+	if !respBody.validate(&req) {
 		return
 	}
 
 	err := s.app.ResetBuckets(req.Login, req.IP)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+	respBody.sendResult(http.StatusOK, true, err)
 }

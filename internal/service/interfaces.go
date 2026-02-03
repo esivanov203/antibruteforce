@@ -29,6 +29,6 @@ type Limiter interface {
 
 type IPList interface {
 	Contains(ip net.IP) bool
-	Add(ip string) error
-	Remove(ip string) error
+	Add(subnet string) error
+	Remove(subnet string) error
 }

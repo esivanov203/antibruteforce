@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -13,7 +14,15 @@ import (
 )
 
 func main() {
-	log.Println("server starting")
+	printVersion()
+	if len(os.Args) > 1 {
+		if os.Args[1] != "version" {
+			fmt.Println("Anti bruteforce service\nUsage: server [version]")
+		}
+		os.Exit(0)
+	}
+
+	log.Println("Anti bruteforce server starting")
 
 	if err := godotenv.Load(); err != nil {
 		log.Printf(".env file not found or failed to load: %v\n", err)

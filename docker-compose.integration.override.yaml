@@ -1,0 +1,18 @@
+services:
+  integration-tests:
+    image: golang:1.23
+    container_name: integration_tests
+    build:
+      context: .
+      dockerfile: Dockerfile.integration
+      args:
+        CODE_DIR: /go/src/
+    volumes:
+      - ./:/go/src/
+    env_file:
+      - .env
+    depends_on:
+      abs:
+        condition: service_healthy
+    networks:
+      - abs_network

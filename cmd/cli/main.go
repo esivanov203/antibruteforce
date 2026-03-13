@@ -5,11 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"strconv"
+
 	"github.com/esivanov203/antibruteforce/internal/httpapi"
 	"github.com/spf13/cobra"
-	"io"
-	"net/http"
-	"os"
 )
 
 func main() {
@@ -18,9 +22,8 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   "cli",
 		Short: "Anti brute service admin utility",
-		Run: func(cmd *cobra.Command, args []string) {
-			url := fmt.Sprintf("http://%s:%s", host, port)
-			resp, err := healthTestService(url)
+		Run: func(_ *cobra.Command, _ []string) {
+			resp, err := healthTestService(host, port)
 			if err != nil {
 				fmt.Println(err)
 			} else {
@@ -44,9 +47,9 @@ func main() {
 	resetCmd := &cobra.Command{
 		Use:   "reset",
 		Short: "Show calendar service version",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			url := fmt.Sprintf("http://%s:%s/bucket/reset", host, port)
-			status, resp, err := doJsonRequest("POST", url, httpapi.ResetBucketRequest{
+			status, resp, err := doJSONRequest("POST", url, httpapi.ResetBucketRequest{
 				Login: login,
 				IP:    ip,
 			})
@@ -68,7 +71,7 @@ func main() {
 	blacklistCmd.AddCommand(&cobra.Command{
 		Use:   "add",
 		Short: "Add subnet to blacklist",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			handleList("POST", "blacklist", host, port, subnet)
 		},
 	})
@@ -76,7 +79,7 @@ func main() {
 	blacklistCmd.AddCommand(&cobra.Command{
 		Use:   "remove",
 		Short: "Remove subnet from blacklist",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			handleList("DELETE", "blacklist", host, port, subnet)
 		},
 	})
@@ -92,7 +95,7 @@ func main() {
 	whitelistCmd.AddCommand(&cobra.Command{
 		Use:   "add",
 		Short: "Add subnet to whitelist",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			handleList("POST", "whitelist", host, port, subnet)
 		},
 	})
@@ -100,7 +103,7 @@ func main() {
 	whitelistCmd.AddCommand(&cobra.Command{
 		Use:   "remove",
 		Short: "Remove subnet from whitelist",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			handleList("DELETE", "whitelist", host, port, subnet)
 		},
 	})
@@ -119,13 +122,13 @@ func handleList(method, listType, host, port, subnet string) {
 	var url string
 	if method == "POST" {
 		url = fmt.Sprintf("http://%s:%s/%s", host, port, listType)
-		status, resp, err := doJsonRequest(method, url, httpapi.SubnetRequest{Subnet: subnet})
+		status, resp, err := doJSONRequest(method, url, httpapi.SubnetRequest{Subnet: subnet})
 		printResult(status, resp, err)
 		return
 	}
 
 	url = fmt.Sprintf("http://%s:%s/%s?subnet=%s", host, port, listType, subnet)
-	status, resp, err := doJsonRequest(method, url, struct{}{})
+	status, resp, err := doJSONRequest(method, url, struct{}{})
 	fmt.Println(method, status, resp, err)
 	printResult(status, resp, err)
 }
@@ -147,15 +150,15 @@ func printResult(status int, resp httpapi.ResponseBody, err error) {
 	}
 }
 
-func doJsonRequest(method, url string, request interface{}) (int, httpapi.ResponseBody, error) {
+func doJSONRequest(method, url string, request interface{}) (int, httpapi.ResponseBody, error) {
 	var body httpapi.ResponseBody
 
 	var req *http.Request
 	var err error
 	if request != nil {
-		bj, err := json.Marshal(request)
-		if err != nil {
-			return 0, body, err
+		bj, er := json.Marshal(request)
+		if er != nil {
+			return 0, body, er
 		}
 		req, err = http.NewRequest(method, url, bytes.NewBuffer(bj))
 	} else {
@@ -184,17 +187,35 @@ func doJsonRequest(method, url string, request interface{}) (int, httpapi.Respon
 	return resp.StatusCode, body, err
 }
 
-func healthTestService(url string) (string, error) {
-	resp, err := http.Get(url)
+func healthTestService(host, port string) (string, error) {
+	// проверка host
+	if host != "localhost" && net.ParseIP(host) == nil {
+		return "", fmt.Errorf("invalid host: %s", host)
+	}
+
+	// проверка порта
+	p, err := strconv.Atoi(port)
+	if err != nil || p <= 0 || p > 65535 {
+		return "", fmt.Errorf("invalid port: %s", port)
+	}
+
+	// формируем безопасный URL через url.URL
+	u := &url.URL{
+		Scheme: "http",
+		Host:   fmt.Sprintf("%s:%d", host, p),
+	}
+
+	//nolint:noctx
+	resp, err := http.Get(u.String()) // безопасно
 	if err != nil {
 		return "", err
 	}
+	defer resp.Body.Close()
 	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
-
 	}
 
 	return string(respBody), nil

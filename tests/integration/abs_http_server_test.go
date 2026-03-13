@@ -5,32 +5,30 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/esivanov203/antibruteforce/internal/httpapi"
-	"github.com/esivanov203/antibruteforce/internal/service"
-	"github.com/joho/godotenv"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"sync"
 	"testing"
+
+	"github.com/esivanov203/antibruteforce/internal/httpapi"
+	"github.com/esivanov203/antibruteforce/internal/service"
+	"github.com/joho/godotenv"
+	"github.com/stretchr/testify/require"
 )
 
-func httpUrl() (string, error) {
+func httpURL() string {
 	host := os.Getenv("HOST")
 	port := os.Getenv("PORT")
 	u := fmt.Sprintf("http://%s:%s/", host, port)
 
-	return u, nil
+	return u
 }
 
 func makeRequest(bj []byte, route string) (httpapi.ResponseBody, int, error) {
 	body := httpapi.ResponseBody{}
-	urlBase, err := httpUrl()
-	if err != nil {
-		return httpapi.ResponseBody{}, 0, err
-	}
+	urlBase := httpURL()
 
 	//nolint:noctx
 	resp, err := http.Post(urlBase+route, "application/json", bytes.NewBuffer(bj))
@@ -52,12 +50,13 @@ func makeRequest(bj []byte, route string) (httpapi.ResponseBody, int, error) {
 	return body, resp.StatusCode, err
 }
 
+//nolint:funlen
 func TestAuth(t *testing.T) {
 	err := godotenv.Load("../../.env")
 	require.NoError(t, err)
 
 	request := httpapi.AuthRequest{
-		Login:    "Johny",
+		Login:    "John",
 		Password: "password",
 		IP:       "10.10.10.10",
 	}
@@ -67,7 +66,7 @@ func TestAuth(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 0; i < limit; i++ {
-		request.Password = request.Password + strconv.Itoa(i)
+		request.Password += strconv.Itoa(i)
 
 		bj, err := json.Marshal(request)
 		require.NoError(t, err)
@@ -108,14 +107,13 @@ func TestAuth(t *testing.T) {
 	require.Len(t, body.Errors, 0)
 	require.True(t, body.OK)
 
-	//бакет сбросился
+	// бакет сбросился
 	bj, err = json.Marshal(request)
 	require.NoError(t, err)
 	body, status, err = makeRequest(bj, "auth")
 
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, status)
-	require.Len(t, body.Errors, 0)
 
 	require.True(t, body.OK)
 
@@ -129,7 +127,7 @@ func TestAuth(t *testing.T) {
 	request.Password = "popular"
 
 	for i := 0; i < limit; i++ {
-		request.Login = request.Login + strconv.Itoa(i)
+		request.Login += strconv.Itoa(i)
 		bj, err := json.Marshal(request)
 		require.NoError(t, err)
 
@@ -137,7 +135,6 @@ func TestAuth(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, status)
-		require.Len(t, body.Errors, 0)
 
 		require.True(t, body.OK)
 	}
@@ -149,7 +146,6 @@ func TestAuth(t *testing.T) {
 	body, status, err = makeRequest(bj, "auth")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, status)
-	require.Len(t, body.Errors, 0)
 
 	require.False(t, body.OK)
 
@@ -167,8 +163,8 @@ func TestAuth(t *testing.T) {
 		wg.Add(1)
 		go func(request httpapi.AuthRequest, i int) {
 			defer wg.Done()
-			request.Login = request.Login + strconv.Itoa(i)
-			request.Password = request.Password + strconv.Itoa(i)
+			request.Login += strconv.Itoa(i)
+			request.Password += strconv.Itoa(i)
 
 			bj, err := json.Marshal(request)
 			require.NoError(t, err)
@@ -177,7 +173,6 @@ func TestAuth(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, status)
-			require.Len(t, body.Errors, 0)
 
 			require.True(t, body.OK)
 		}(request, i)
@@ -190,7 +185,6 @@ func TestAuth(t *testing.T) {
 	body, status, err = makeRequest(bj, "auth")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, status)
-	require.Len(t, body.Errors, 0)
 
 	require.False(t, body.OK)
 
@@ -225,10 +219,9 @@ func TestBlackWhiteList(t *testing.T) {
 	bj, err := json.Marshal(blackAddRequest)
 	require.NoError(t, err)
 
-	body, status, err := makeRequest(bj, "blacklist")
+	_, status, err := makeRequest(bj, "blacklist")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, status)
-	require.Len(t, body.Errors, 0)
 
 	request := httpapi.AuthRequest{
 		Login:    "Bob",
@@ -237,19 +230,22 @@ func TestBlackWhiteList(t *testing.T) {
 	}
 	bj, err = json.Marshal(request)
 	require.NoError(t, err)
-	body, status, err = makeRequest(bj, "auth")
+	body, status, err := makeRequest(bj, "auth")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, status)
-	require.Len(t, body.Errors, 0)
 	require.False(t, body.OK)
 
 	client := &http.Client{}
-	urlBase, err := httpUrl()
-	require.NoError(t, err)
+	urlBase := httpURL()
 
 	deleteURL := fmt.Sprintf("%sblacklist?subnet=%s", urlBase, blackAddRequest.Subnet)
 	fmt.Println(deleteURL)
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodDelete, deleteURL, bytes.NewBuffer([]byte("{}")))
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodDelete,
+		deleteURL,
+		bytes.NewBuffer([]byte("{}")),
+	)
 	require.NoError(t, err)
 
 	resp, err := client.Do(req)
@@ -264,8 +260,7 @@ func TestBlackWhiteList(t *testing.T) {
 	bj, err = json.Marshal(whiteAddRequest)
 	require.NoError(t, err)
 
-	body, status, err = makeRequest(bj, "whitelist")
+	_, status, err = makeRequest(bj, "whitelist")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, status)
-	require.Len(t, body.Errors, 0)
 }

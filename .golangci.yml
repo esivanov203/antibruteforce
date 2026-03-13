@@ -21,6 +21,8 @@ linters-settings:
           - github.com/joho/godotenv
           - github.com/esivanov203/antibruteforce/internal/httpapi
           - github.com/esivanov203/antibruteforce/cmd/version
+          - github.com/spf13/cobra
+          - github.com/joho/godotenv'
       Test:
         files:
           - $test
@@ -32,6 +34,8 @@ linters-settings:
           - github.com/stretchr/testify/assert
           - github.com/stretchr/testify/mock
           - github.com/benbjohnson/clock
+          - github.com/esivanov203/antibruteforce/internal/httpapi
+          - github.com/joho/godotenv
 
 linters:
   disable-all: true

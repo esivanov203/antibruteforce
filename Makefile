@@ -30,6 +30,9 @@ clean:
 run: build
 	$(BIN_SERVER)
 
+cli: build
+	$(BIN_CLI)
+
 # ==============================
 # Release
 # ==============================
